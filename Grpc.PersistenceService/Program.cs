@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Server.Kestrel.Core;
-using ServiceGateway.Services;
+﻿using Grpc.PersistenceService.Services;
 
-namespace ServiceGateway
+namespace Grpc.PersistenceService
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +19,11 @@ namespace ServiceGateway
             // Configure the HTTP request pipeline.
             app.MapGrpcService<GreeterService>();
             app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+
             app.Run();
         }
     }
 }
+
+
+

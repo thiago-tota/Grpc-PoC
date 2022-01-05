@@ -1,7 +1,7 @@
-﻿using Grpc.Core;
-using ServiceA;
+﻿using Grpc.Domain;
+using Grpc.Core;
 
-namespace ServiceA.Services;
+namespace Grpc.PersistenceService.Services;
 
 public class GreeterService : Greeter.GreeterBase
 {
