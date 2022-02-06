@@ -1,15 +1,16 @@
-﻿using System.Data.Entity;
+﻿using Grpc.Domain.Model;
+using System.Data.Entity;
 using System.Linq.Expressions;
 
 namespace Grpc.Infrastructure.Repository
 {
-    public abstract class BaseRepository<T>
-        : IRepository<T> where T : class
+    public abstract class RepositoryEfBase<T>
+        : IRepository<T> where T : EntityBase
     {
         protected DbContext Context { get; }
         protected DbSet<T> DbSet { get; }
 
-        public BaseRepository(DbContext context)
+        public RepositoryEfBase(DbContext context)
         {
             Context = context;
             DbSet = context.Set<T>();
@@ -17,12 +18,10 @@ namespace Grpc.Infrastructure.Repository
 
         public virtual async Task<bool> Delete(T entity)
         {
-            if (Context.Entry(entity).State == EntityState.Detached)
-            {
-                DbSet.Attach(entity);
-            }
+            DbSet.Remove(entity);
+            Context.Entry(entity).State = EntityState.Deleted;
 
-            return await Task.FromResult(DbSet.Remove(entity) == default);
+            return await SaveChanges().ConfigureAwait(false);
         }
 
         public virtual async Task<bool> Delete(object id)
@@ -77,7 +76,8 @@ namespace Grpc.Infrastructure.Repository
 
         public virtual async Task<bool> Insert(T entity)
         {
-            return await Task.FromResult(DbSet.Add(entity) == default);
+            DbSet.Add(entity);
+            return await SaveChanges().ConfigureAwait(false);
         }
 
         public virtual async Task<bool> Update(T entity)
@@ -85,7 +85,12 @@ namespace Grpc.Infrastructure.Repository
             DbSet.Attach(entity);
             Context.Entry(entity).State = EntityState.Modified;
 
-            return await Task.FromResult(Context.Entry(entity).State == EntityState.Modified);
+            return await SaveChanges().ConfigureAwait(false);
+        }
+
+        public virtual async Task<bool> SaveChanges()
+        {
+            return await Context.SaveChangesAsync().ConfigureAwait(false) > 0;
         }
     }
 }

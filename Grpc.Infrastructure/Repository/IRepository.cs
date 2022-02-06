@@ -1,8 +1,9 @@
-﻿using System.Linq.Expressions;
+﻿using Grpc.Domain.Model;
+using System.Linq.Expressions;
 
 namespace Grpc.Infrastructure.Repository
 {
-    public interface IRepository<T> where T : class
+    public interface IRepository<T> where T : EntityBase
     {
         Task<bool> Delete(T entity);
 

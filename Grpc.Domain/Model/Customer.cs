@@ -1,9 +1,14 @@
 ﻿using System;
 
-namespace Grpc.Domain
+namespace Grpc.Domain.Model
 {
-    public class Customer
+    public class Customer : EntityBase
     {
+        public override object Id
+        {
+            get => CustomerId;
+            set => CustomerId = Convert.ToInt32(value);
+        }
         public int CustomerId { get; set; }
         public bool NameStyle { get; set; }
         public string Title { get; set; }

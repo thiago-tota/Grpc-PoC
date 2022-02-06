@@ -1,4 +1,4 @@
-﻿using Grpc.Domain;
+﻿using Grpc.Domain.Model;
 using System.Data.Entity;
 
 namespace Grpc.Infrastructure.SQLServer

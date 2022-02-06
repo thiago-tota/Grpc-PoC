@@ -14,7 +14,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="EntityFramework" Version="6.4.4" />
-		<PackageReference Include="Grpc.AspNetCore" Version="2.41.0" />
+		<PackageReference Include="Grpc.AspNetCore" Version="2.42.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis" Version="4.0.1" />
 	</ItemGroup>
 

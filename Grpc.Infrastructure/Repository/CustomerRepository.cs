@@ -1,12 +1,21 @@
-﻿using Grpc.Domain;
-using System.Data.Entity;
+﻿using ConnectionTest.Infrastructure;
+using Grpc.Domain.Model;
+using System.Linq.Expressions;
 
 namespace Grpc.Infrastructure.Repository
 {
-    public class CustomerRepository : BaseRepository<Customer>
+    public class CustomerRepository<T>
+        : RepositoryBase<Customer> where T : EntityBase
     {
-        public CustomerRepository(DbContext context) : base(context)
+        private readonly SqlDatabase _sqlDatabase;
+
+        public CustomerRepository(string connectionString)
         {
+            _sqlDatabase = new SqlDatabase(connectionString);
+
+            
         }
+
+       
     }
 }

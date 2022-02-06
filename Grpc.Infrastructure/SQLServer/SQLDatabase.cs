@@ -1,32 +1,30 @@
-﻿//using PersistenceService.Infrastructure.Model;
-//using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 
-//namespace PersistenceService.Infrastructure.SQLServer
-//{
-//    internal class SQLDatabase
-//    {
-//        private readonly DbCredentials _dbCredentials;
-//        private SqlConnection? _sqlConnection;
+namespace ConnectionTest.Infrastructure
+{
+    internal class SqlDatabase
+    {
+        private readonly string _connectionString;
+        private SqlConnection? _sqlConnection;
 
-//        public SQLDatabase(DbCredentials dbCredentials)
-//        {
-//            _dbCredentials = dbCredentials;
-//        }
+        public SqlDatabase(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
 
-//        public bool Connect()
-//        {
-//            var connection = $"Server={_dbCredentials.Host},{_dbCredentials.Port};Database={_dbCredentials.Database};User Id={_dbCredentials.Username};Password={_dbCredentials.Password}";
-//            _sqlConnection = new SqlConnection(connection);
-//            _sqlConnection.Open();
+        public bool Connect()
+        {
+            _sqlConnection = new SqlConnection(_connectionString);
+            _sqlConnection.Open();
 
-//            return true;
-//        }
+            return true;
+        }
 
-//        public bool Disconnect()
-//        {
-//            _sqlConnection?.Close();
+        public bool Disconnect()
+        {
+            _sqlConnection?.Close();
 
-//            return true;
-//        }
-//    }
-//}
+            return true;
+        }
+    }
+}
