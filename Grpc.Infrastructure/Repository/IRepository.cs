@@ -1,5 +1,9 @@
-﻿using Grpc.Domain.Model;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using Grpc.Domain.Model;
 
 namespace Grpc.Infrastructure.Repository
 {
@@ -11,7 +15,7 @@ namespace Grpc.Infrastructure.Repository
 
         Task<object> ExecuteRawSql(string query, params object[] parameters);
 
-        Task<IEnumerable<T>> Get(int page = 1,
+        Task<List<T>> Get(int page = 1,
                                     int pageSize = 25,
                                     Expression<Func<T, bool>>? filter = default,
                                     Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = default,

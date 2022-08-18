@@ -1,14 +1,22 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Grpc.Domain.Model
 {
     public class Customer : EntityBase
     {
+        [NotMapped]
+        public override string Namespace => "SalesLT";
+
+        [NotMapped]
         public override object Id
         {
             get => CustomerId;
             set => CustomerId = Convert.ToInt32(value);
         }
+
+        [Key]
         public int CustomerId { get; set; }
         public bool NameStyle { get; set; }
         public string Title { get; set; }

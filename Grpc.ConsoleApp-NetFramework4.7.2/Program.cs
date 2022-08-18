@@ -1,9 +1,9 @@
-﻿using Grpc.Domain;
-using Grpc.Net.Client;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using Grpc.Domain;
+using Grpc.Net.Client;
 
-namespace Grpc.ConsoleApp_NetFramework472
+namespace ConsoleApp_NetFramework472
 {
     internal static class Program
     {

@@ -1,22 +1,26 @@
-﻿using Grpc.Domain.Model;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Entity;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using Grpc.Domain.Model;
 
 namespace Grpc.Infrastructure.Repository
 {
-    public abstract class RepositoryEfBase<T>
-        : IRepository<T> where T : EntityBase
+    public abstract class RepositoryEfBase<TEntity>
+        : IRepository<TEntity> where TEntity : EntityBase
     {
         protected DbContext Context { get; }
-        protected DbSet<T> DbSet { get; }
+        protected DbSet<TEntity> DbSet { get; }
 
-        public RepositoryEfBase(DbContext context)
+        protected RepositoryEfBase(DbContext context)
         {
             Context = context;
-            DbSet = context.Set<T>();
+            DbSet = context.Set<TEntity>();
         }
 
-        public virtual async Task<bool> Delete(T entity)
+        public virtual async Task<bool> Delete(TEntity entity)
         {
             DbSet.Remove(entity);
             Context.Entry(entity).State = EntityState.Deleted;
@@ -35,13 +39,13 @@ namespace Grpc.Infrastructure.Repository
             return await DbSet.SqlQuery(query, parameters).ToListAsync();
         }
 
-        public virtual async Task<IEnumerable<T>> Get(int page = 1,
-                                                        int pageSize = 25,
-                                                        Expression<Func<T, bool>>? filter = null,
-                                                        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
-                                                        string? includeProperties = null)
+        public virtual async Task<List<TEntity>> Get(int page = 1,
+            int pageSize = 25,
+            Expression<Func<TEntity, bool>> filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+            string includeProperties = null)
         {
-            IQueryable<T> query = DbSet;
+            IQueryable<TEntity> query = DbSet;
 
             if (filter != null)
             {
@@ -57,30 +61,25 @@ namespace Grpc.Infrastructure.Repository
                 }
             }
 
-            if (orderBy != null)
-            {
-                query = orderBy(query).Skip((page - 1) * pageSize).Take(pageSize);
-            }
-            else
-            {
-                query = query.Take(pageSize);
-            }
+            query = orderBy != null
+                ? orderBy(query).Skip((page - 1) * pageSize).Take(pageSize)
+                : query.Take(pageSize);
 
             return await query.ToListAsync();
         }
 
-        public virtual async Task<T> GetById(object id)
+        public virtual async Task<TEntity> GetById(object id)
         {
             return await DbSet.FindAsync(id).ConfigureAwait(false);
         }
 
-        public virtual async Task<bool> Insert(T entity)
+        public virtual async Task<bool> Insert(TEntity entity)
         {
             DbSet.Add(entity);
             return await SaveChanges().ConfigureAwait(false);
         }
 
-        public virtual async Task<bool> Update(T entity)
+        public virtual async Task<bool> Update(TEntity entity)
         {
             DbSet.Attach(entity);
             Context.Entry(entity).State = EntityState.Modified;

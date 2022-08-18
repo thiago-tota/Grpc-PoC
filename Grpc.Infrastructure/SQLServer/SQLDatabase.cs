@@ -1,11 +1,11 @@
 ﻿using System.Data.SqlClient;
 
-namespace ConnectionTest.Infrastructure
+namespace Grpc.Infrastructure.SqlServer
 {
-    internal class SqlDatabase
+    public class SqlDatabase
     {
         private readonly string _connectionString;
-        private SqlConnection? _sqlConnection;
+        public SqlConnection? SqlConnection;
 
         public SqlDatabase(string connectionString)
         {
@@ -14,15 +14,15 @@ namespace ConnectionTest.Infrastructure
 
         public bool Connect()
         {
-            _sqlConnection = new SqlConnection(_connectionString);
-            _sqlConnection.Open();
+            SqlConnection = new SqlConnection(_connectionString);
+            SqlConnection.Open();
 
             return true;
         }
 
         public bool Disconnect()
         {
-            _sqlConnection?.Close();
+            SqlConnection?.Close();
 
             return true;
         }

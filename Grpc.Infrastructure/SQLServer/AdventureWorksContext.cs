@@ -1,7 +1,7 @@
 ﻿using Grpc.Domain.Model;
 using System.Data.Entity;
 
-namespace Grpc.Infrastructure.SQLServer
+namespace Grpc.Infrastructure.SqlServer
 {
     public class AdventureWorksContext : DbContext
     {

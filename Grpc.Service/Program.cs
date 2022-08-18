@@ -1,11 +1,10 @@
-﻿using Grpc.GatewayService.Services;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+﻿using Grpc.Service.Services;
 
-namespace Grpc.GatewayService
+namespace Grpc.Service
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +19,11 @@ namespace Grpc.GatewayService
             // Configure the HTTP request pipeline.
             app.MapGrpcService<GreeterService>();
             app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
+
             app.Run();
         }
     }
 }
+
+
+

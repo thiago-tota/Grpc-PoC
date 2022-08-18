@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Grpc.Domain.Model
+﻿namespace Grpc.Domain.Model
 {
     public abstract class EntityBase
     {
+        public abstract string Namespace { get; }
         public virtual object Id { get; set; }
     }
 }

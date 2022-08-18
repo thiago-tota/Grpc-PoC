@@ -5,8 +5,6 @@ namespace Grpc.Infrastructure.Repository
 {
     public class CustomerRepositoryEf : RepositoryEfBase<Customer>
     {
-        public CustomerRepositoryEf(DbContext context) : base(context)
-        {
-        }
+        public CustomerRepositoryEf(DbContext context) : base(context) { }
     }
 }
