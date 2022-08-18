@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Grpc.Domain.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace Grpc.Infrastructure.Repository
 {
@@ -36,7 +36,7 @@ namespace Grpc.Infrastructure.Repository
 
         public virtual async Task<object> ExecuteRawSql(string query, params object[] parameters)
         {
-            return await DbSet.SqlQuery(query, parameters).ToListAsync();
+            return await DbSet.FromSqlRaw(query, parameters).ToListAsync();
         }
 
         public virtual async Task<List<TEntity>> Get(int page = 1,

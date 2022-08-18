@@ -1,8 +1,8 @@
-﻿using System.Data.Entity;
-using Grpc.Domain.Model;
+﻿using Grpc.Domain.Model;
 using Grpc.Infrastructure.Repository;
 using Grpc.Infrastructure.SqlServer;
 using Grpc.Service.Settings;
+using Microsoft.EntityFrameworkCore;
 
 namespace Grpc.Service
 {
@@ -19,10 +19,15 @@ namespace Grpc.Service
 
         protected virtual void RegisterRepositories(IServiceCollection services, DbSettings dbSettings)
         {
-            services.AddSingleton<DbContext>(p => new AdventureWorksContext(dbSettings.ConnectionString));
+            if (dbSettings?.ConnectionString == null)
+                throw new ArgumentException("ConnectionString cannot be null.");
+
+            var contextOptions = new DbContextOptionsBuilder<AdventureWorksContext>()
+                                .UseSqlServer(dbSettings.ConnectionString)
+                                .Options;
+
+            services.AddScoped<DbContext>(p => new AdventureWorksContext(contextOptions));
             services.AddSingleton<IRepository<Customer>, CustomerRepositoryEf>();
-            //services.AddSingleton<IRepository<Customer>>(p => new CustomerRepositoryDao(dbSettings.ConnectionString));
-            //services.AddSingleton<IRepository<Customer>>(p => new CustomerRepositoryDapper(dbSettings.ConnectionString));
         }
 
         private static IConfiguration GetConfiguration()

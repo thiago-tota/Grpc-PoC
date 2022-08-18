@@ -1,21 +1,19 @@
 ﻿using Grpc.Domain.Model;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Grpc.Infrastructure.SqlServer
 {
     public class AdventureWorksContext : DbContext
     {
-        public AdventureWorksContext(string connectionString) : base(connectionString)
+        public AdventureWorksContext(DbContextOptions<AdventureWorksContext> options)
+            : base(options)
+        { }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-
-        }
-
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        {
-            Database.SetInitializer<AdventureWorksContext>(null);
-
             modelBuilder.Entity<Customer>().ToTable("Customer", "SalesLT")
                 .Property(e => e.CustomerId).HasColumnName("CustomerID");
+
             modelBuilder.Entity<Customer>().ToTable("Customer", "SalesLT")
                .Property(e => e.ModifiedDate).HasColumnType("datetime");
 

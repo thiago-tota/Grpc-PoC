@@ -1,11 +1,11 @@
-﻿using System.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
 namespace Grpc.Infrastructure.SqlServer
 {
     public class SqlDatabase
     {
         private readonly string _connectionString;
-        public SqlConnection? SqlConnection;
+        public SqlConnection SqlConnection;
 
         public SqlDatabase(string connectionString)
         {

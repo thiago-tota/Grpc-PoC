@@ -3,40 +3,41 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 using Grpc.Domain.Model;
 using Grpc.Infrastructure.SqlServer;
+using Microsoft.Data.SqlClient;
+using static Dapper.SqlMapper;
 
 namespace Grpc.Infrastructure.Repository
 {
-    public abstract class RepositoryDaoBase<T>
-    : IRepository<T> where T : EntityBase, new()
+    public abstract class RepositoryDaoBase<TEntity> : IRepository<TEntity> where TEntity : EntityBase, new()
     {
-        protected SqlDatabase SqlDatabase { get; }
+        protected SqlDatabase _sqlDatabase;
 
         public RepositoryDaoBase(string connectionString)
         {
-            SqlDatabase = new SqlDatabase(connectionString);
+            _sqlDatabase = new SqlDatabase(connectionString);
         }
 
-        public virtual async Task<bool> Delete(T entity)
+        public virtual async Task<bool> Delete(TEntity entity)
         {
             return await Delete(entity.Id).ConfigureAwait(false);
         }
 
         public virtual async Task<bool> Delete(object id)
         {
-            var defaultInstance = new T();
+            var defaultInstance = new TEntity();
             var query = $"DELETE FROM {GetTableName(defaultInstance)} WHERE {GetPropertyKey(defaultInstance)} = @Id";
 
             int result;
             try
             {
-                SqlDatabase.Connect();
-                var sqlCommand = new SqlCommand(query, SqlDatabase.SqlConnection);
+                _sqlDatabase.Connect();
+                var sqlCommand = new SqlCommand(query, _sqlDatabase.SqlConnection);
                 sqlCommand.Parameters.Add(id);
                 result = await sqlCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
 
@@ -47,7 +48,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
@@ -59,13 +60,13 @@ namespace Grpc.Infrastructure.Repository
 
             try
             {
-                SqlDatabase.Connect();
-                var sqlCommand = new SqlCommand(query, SqlDatabase.SqlConnection);
+                _sqlDatabase.Connect();
+                var sqlCommand = new SqlCommand(query, _sqlDatabase.SqlConnection);
                 AddCommandParameters(sqlCommand, parameters);
 
                 if (query.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
                 {
-                    using var dataReader = await sqlCommand.ExecuteReaderAsync().ConfigureAwait(false);
+                    await using var dataReader = await sqlCommand.ExecuteReaderAsync().ConfigureAwait(false);
                     var records = new List<object>();
 
                     while (await dataReader.ReadAsync())
@@ -86,30 +87,31 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result;
         }
 
-        public virtual async Task<List<T>> Get(int page = 1,
+        public virtual async Task<List<TEntity>> Get(int page = 1,
             int pageSize = 25,
-            Expression<Func<T, bool>> filter = null,
-            Func<IQueryable<T>, IOrderedQueryable<T>> orderBy = null,
+            Expression<Func<TEntity, bool>> filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null)
         {
-            var defaultInstance = new T();
-            var fields = string.Join(", ", GetProperties(defaultInstance));
+            var defaultInstance = new TEntity();
 
+            var fields = $"{GetPropertyKey(defaultInstance)}, {string.Join(", ", GetPropertyNames(defaultInstance))}";
+  
             var query = $"SELECT TOP {pageSize} {fields} FROM {GetTableName(defaultInstance)}";
-
-            var result = new List<T>();
+            
+            var result = new List<TEntity>();
 
             try
             {
-                SqlDatabase.Connect();
-                var sqlCommand = new SqlCommand(query, SqlDatabase.SqlConnection);
-                using var dataReader = await sqlCommand.ExecuteReaderAsync().ConfigureAwait(false);
+                _sqlDatabase.Connect();
+                var sqlCommand = new SqlCommand(query, _sqlDatabase.SqlConnection);
+                await using var dataReader = await sqlCommand.ExecuteReaderAsync().ConfigureAwait(false);
 
                 while (await dataReader.ReadAsync())
                 {
@@ -122,23 +124,23 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result;
         }
 
-        public virtual async Task<T> GetById(object id)
+        public virtual async Task<TEntity> GetById(object id)
         {
             var result = await Get(pageSize: 1, filter: f => f.Id == id);
             return result.First();
         }
 
-        public virtual async Task<bool> Insert(T entity)
+        public virtual async Task<bool> Insert(TEntity entity)
         {
-            var properties = GetProperties(entity);
+            var properties = GetPropertyNames(entity);
             var fields = string.Join(", ", properties);
-            var parameters = string.Join(", @", properties);
+            var parameters = string.Join(", @", properties).Insert(0, "@");
 
             var query = $"INSERT INTO {GetTableName(entity)} ({fields}) VALUES ({parameters})";
 
@@ -146,8 +148,8 @@ namespace Grpc.Infrastructure.Repository
 
             try
             {
-                SqlDatabase.Connect();
-                var sqlCommand = new SqlCommand(query, SqlDatabase.SqlConnection);
+                _sqlDatabase.Connect();
+                var sqlCommand = new SqlCommand(query, _sqlDatabase.SqlConnection);
                 AddCommandParameters(sqlCommand, entity);
 
                 result = await sqlCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -158,15 +160,15 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
         }
 
-        public virtual async Task<bool> Update(T entity)
+        public virtual async Task<bool> Update(TEntity entity)
         {
-            var properties = GetProperties(entity);
+            var properties = GetPropertyNames(entity);
             var fields = string.Join(", ", properties, " = @", properties);
 
             var query = $"UPDATE {GetTableName(entity)} SET {fields}";
@@ -174,8 +176,8 @@ namespace Grpc.Infrastructure.Repository
             int result = 0;
             try
             {
-                SqlDatabase.Connect();
-                var sqlCommand = new SqlCommand(query, SqlDatabase.SqlConnection);
+                _sqlDatabase.Connect();
+                var sqlCommand = new SqlCommand(query, _sqlDatabase.SqlConnection);
                 AddCommandParameters(sqlCommand, entity);
 
                 result = await sqlCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -186,49 +188,49 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
         }
 
-        protected List<string> GetProperties(T entity)
+        protected List<PropertyInfo> GetProperties(TEntity entity)
         {
-            var properties = new List<string>();
-
-            foreach (var item in entity.GetType().GetProperties())
-            {
-                if (item.CustomAttributes.All(f => f.AttributeType != typeof(NotMappedAttribute)))
-                    properties.Add(item.Name);
-            }
-
-            return properties;
+            return entity.GetType().GetProperties()
+                .Where(item =>
+                    item.CustomAttributes.All(f =>
+                                                f.AttributeType != typeof(NotMappedAttribute) &&
+                                                f.AttributeType != typeof(KeyAttribute))
+                    ).ToList();
         }
 
-        protected string GetPropertyKey(T entity)
+        protected List<string> GetPropertyNames(TEntity entity)
         {
-            string property = "";
-
-            foreach (var item in entity.GetType().GetProperties())
-            {
-                if (item.CustomAttributes.Any(f => f.AttributeType == typeof(KeyAttribute)))
-                    property = item.Name;
-            }
-
-            return property;
+            return entity.GetType().GetProperties()
+                .Where(item =>
+                    item.CustomAttributes.All(f =>
+                        f.AttributeType != typeof(NotMappedAttribute) &&
+                        f.AttributeType != typeof(KeyAttribute))
+                ).Select(p => p.Name).ToList();
         }
 
-        private T GetRecord(IDataReader dataReader)
+        protected string GetPropertyKey(TEntity entity)
         {
-            var record = new T();
+            return entity.GetType().GetProperties().First(item =>
+                            item.CustomAttributes.Any(f => f.AttributeType == typeof(KeyAttribute))).Name;
+        }
 
-            foreach (var item in record.GetType().GetProperties())
+        private TEntity GetRecord(IDataReader dataReader)
+        {
+            var entity = new TEntity();
+
+            foreach (var item in GetProperties(entity))
             {
                 if (item.CustomAttributes.All(f => f.AttributeType != typeof(NotMappedAttribute)) && dataReader[item.Name] != DBNull.Value)
-                    item.SetValue(record, dataReader[item.Name]);
+                    item.SetValue(entity, dataReader[item.Name]);
             }
 
-            return record;
+            return entity;
         }
 
         private object GetRecordWithoutType(IDataReader dataReader)
@@ -242,9 +244,9 @@ namespace Grpc.Infrastructure.Repository
             return record;
         }
 
-        private void AddCommandParameters(SqlCommand sqlCommand, T entity)
+        private void AddCommandParameters(SqlCommand sqlCommand, TEntity entity)
         {
-            foreach (var item in entity.GetType().GetProperties())
+            foreach (var item in GetProperties(entity))
             {
                 sqlCommand.Parameters.AddWithValue(item.Name, item.GetValue(entity));
             }
@@ -258,9 +260,9 @@ namespace Grpc.Infrastructure.Repository
             }
         }
 
-        protected string GetTableName(T entity)
+        protected string GetTableName(TEntity entity)
         {
-            return $"{entity.Namespace}{(entity.Namespace == default ? "" : ".")}{typeof(T).Name}";
+            return $"{entity.Namespace}{(entity.Namespace == default ? "" : ".")}{typeof(TEntity).Name}";
         }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -14,8 +16,7 @@ namespace Grpc.Infrastructure.Repository
     /// As a comparison in this class there are only the differences between DAO x Dapper
     /// In a real scenario RepositoryDapperBase should be dependent of IRepository<T> and have all necessary code in it.
     /// </summary>
-    public abstract class RepositoryDapperBase<T>
-        : RepositoryDaoBase<T> where T : EntityBase, new()
+    public abstract class RepositoryDapperBase<T> : RepositoryDaoBase<T> where T : EntityBase, new()
     {
         public RepositoryDapperBase(string connectionString) : base(connectionString)
         {
@@ -29,8 +30,8 @@ namespace Grpc.Infrastructure.Repository
             int result;
             try
             {
-                SqlDatabase.Connect();
-                result = await SqlDatabase.SqlConnection.ExecuteAsync(query, new { Id = id }).ConfigureAwait(false);
+                _sqlDatabase.Connect();
+                result = await _sqlDatabase.SqlConnection.ExecuteAsync(query, new { Id = id }).ConfigureAwait(false);
             }
             catch
             {
@@ -38,7 +39,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
@@ -50,15 +51,15 @@ namespace Grpc.Infrastructure.Repository
 
             try
             {
-                SqlDatabase.Connect();
+                _sqlDatabase.Connect();
 
                 if (query.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
                 {
-                    result = await SqlDatabase.SqlConnection.QueryAsync(query, GetCommandParameters(parameters)).ConfigureAwait(false);
+                    result = await _sqlDatabase.SqlConnection.QueryAsync(query, GetCommandParameters(parameters)).ConfigureAwait(false);
                 }
                 else
                 {
-                    result = await SqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(parameters)).ConfigureAwait(false);
+                    result = await _sqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(parameters)).ConfigureAwait(false);
                 }
             }
             catch
@@ -67,7 +68,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result;
@@ -80,7 +81,7 @@ namespace Grpc.Infrastructure.Repository
             string includeProperties = null)
         {
             var defaultInstance = new T();
-            var fields = string.Join(", ", GetProperties(defaultInstance));
+            var fields = string.Join(", ", GetPropertyNames(defaultInstance));
 
             var query = $"SELECT TOP {pageSize} {fields} FROM {GetTableName(defaultInstance)}";
 
@@ -88,8 +89,8 @@ namespace Grpc.Infrastructure.Repository
 
             try
             {
-                SqlDatabase.Connect();
-                result = await SqlDatabase.SqlConnection.QueryAsync<T>(query).ConfigureAwait(false);
+                _sqlDatabase.Connect();
+                result = await _sqlDatabase.SqlConnection.QueryAsync<T>(query).ConfigureAwait(false);
             }
             catch
             {
@@ -97,7 +98,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result.ToList();
@@ -105,9 +106,9 @@ namespace Grpc.Infrastructure.Repository
 
         public override async Task<bool> Insert(T entity)
         {
-            var properties = GetProperties(entity);
+            var properties = GetPropertyNames(entity);
             var fields = string.Join(", ", properties);
-            var parameters = string.Join(", @", properties);
+            var parameters = string.Join(", @", properties).Insert(0, "@");
 
             var query = $"INSERT INTO {GetTableName(entity)} ({fields}) VALUES ({parameters})";
 
@@ -115,8 +116,8 @@ namespace Grpc.Infrastructure.Repository
 
             try
             {
-                SqlDatabase.Connect();
-                result = await SqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(entity)).ConfigureAwait(false);
+                _sqlDatabase.Connect();
+                result = await _sqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(entity)).ConfigureAwait(false);
             }
             catch
             {
@@ -124,7 +125,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
@@ -132,7 +133,7 @@ namespace Grpc.Infrastructure.Repository
 
         public override async Task<bool> Update(T entity)
         {
-            var properties = GetProperties(entity);
+            var properties = GetPropertyNames(entity);
             var fields = string.Join(", ", properties, " = @", properties);
 
             var query = $"UPDATE {GetTableName(entity)} SET {fields}";
@@ -140,8 +141,8 @@ namespace Grpc.Infrastructure.Repository
             int result = 0;
             try
             {
-                SqlDatabase.Connect();
-                result = await SqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(entity)).ConfigureAwait(false);
+                _sqlDatabase.Connect();
+                result = await _sqlDatabase.SqlConnection.ExecuteAsync(query, GetCommandParameters(entity)).ConfigureAwait(false);
             }
             catch
             {
@@ -149,7 +150,7 @@ namespace Grpc.Infrastructure.Repository
             }
             finally
             {
-                SqlDatabase.Disconnect();
+                _sqlDatabase.Disconnect();
             }
 
             return result > 0;
@@ -158,7 +159,12 @@ namespace Grpc.Infrastructure.Repository
         private DynamicParameters GetCommandParameters(T entity)
         {
             var dynamicParameters = new DynamicParameters();
-            foreach (var item in entity.GetType().GetProperties())
+
+            foreach (var item in entity.GetType().GetProperties()
+                                                     .Where(item =>
+                                                         item.CustomAttributes.All(f =>
+                                                             f.AttributeType != typeof(NotMappedAttribute) &&
+                                                             f.AttributeType != typeof(KeyAttribute))))
             {
                 dynamicParameters.Add(item.Name, item.GetValue(entity));
             }
@@ -169,6 +175,7 @@ namespace Grpc.Infrastructure.Repository
         private DynamicParameters GetCommandParameters(params object[] parameters)
         {
             var dynamicParameters = new DynamicParameters();
+
             foreach (var item in parameters)
             {
                 dynamicParameters.Add(item.ToString(), item);

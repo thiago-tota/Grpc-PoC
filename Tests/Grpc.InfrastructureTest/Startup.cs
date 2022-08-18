@@ -1,8 +1,9 @@
-﻿using System.Data.Entity;
-using Grpc.Domain.Model;
+﻿using Grpc.Domain.Model;
 using Grpc.Infrastructure.Repository;
 using Grpc.Infrastructure.SqlServer;
 using Grpc.Service.Settings;
+using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -15,12 +16,16 @@ using Xunit;
 
 namespace Grpc.InfrastructureTest
 {
+    
     internal class Startup : Grpc.Service.Startup
     {
         protected override void RegisterRepositories(IServiceCollection services, DbSettings dbSettings)
         {
+            var contextOptions = new DbContextOptionsBuilder<AdventureWorksContext>()
+                                .UseInMemoryDatabase("AdventureWorks")
+                                .Options;
 
-            services.AddSingleton<DbContext>(p => new AdventureWorksContext(dbSettings.ConnectionString));
+            services.AddScoped<DbContext>(p => new AdventureWorksContext(contextOptions));
             services.AddSingleton<IRepository<Customer>, CustomerRepositoryEf>();
             services.AddSingleton<IRepository<Customer>>(p => new CustomerRepositoryDao(dbSettings.ConnectionString));
             services.AddSingleton<IRepository<Customer>>(p => new CustomerRepositoryDapper(dbSettings.ConnectionString));

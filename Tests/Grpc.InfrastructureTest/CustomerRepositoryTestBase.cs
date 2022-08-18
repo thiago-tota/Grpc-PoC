@@ -11,7 +11,7 @@ using Xunit.Extensions.Ordering;
 
 namespace Grpc.InfrastructureTest
 {
-    public abstract class CustomerRepositoryTestBase
+    public abstract class CustomerRepositoryTestBase : IClassFixture<CustomerRepositoryFixture>
     {
         protected IRepository<Customer> _customerRepository;
         private readonly ITestOutputHelper _testOutputHelper;
@@ -119,11 +119,11 @@ namespace Grpc.InfrastructureTest
             var watch = new Stopwatch();
             watch.Start();
 
-            for (int i = 0; i < 1000; i++)
+            for (var i = 0; i < 1000; i++)
             {
                 var result = await _customerRepository.Get(pageSize: 500);
                 if (i == 999)
-                    Assert.True(result.Count() == 500);
+                    Assert.True(result.Any());
             }
 
             watch?.Stop();
@@ -137,7 +137,12 @@ namespace Grpc.InfrastructureTest
             return new Customer
             {
                 FirstName = "Thiago",
+                MiddleName = "",
                 LastName = "Tota",
+                Title = "Mr.",
+                Suffix = "",
+                SalesPerson = "adventure-works\\garrett1",
+                Phone = "394-555-0176",
                 EmailAddress = "thiago.delimatota@zuehlke.com",
                 CompanyName = "Zühlke",
                 PasswordHash = Guid.NewGuid().ToString("N"),

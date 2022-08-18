@@ -1,5 +1,5 @@
 ﻿using Grpc.Domain.Model;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Grpc.Infrastructure.Repository
 {

@@ -10,9 +10,6 @@ namespace Grpc.InfrastructureTest
     [UsedImplicitly]
     public class CustomerRepositoryEfTest : CustomerRepositoryTestBase
     {
-        readonly IRepository<Customer> customerRespository;
-        readonly ITestOutputHelper testOutputHelper;
-
         public CustomerRepositoryEfTest(IEnumerable<IRepository<Customer>> customerRepositories, ITestOutputHelper testOutputHelper)
             : base(testOutputHelper)
         {
